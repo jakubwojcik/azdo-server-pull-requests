@@ -104,14 +104,13 @@ export function createAssignedTree(
     const client = getClient();
     if (!client) return [];
     try {
-      const { baseCommit, iterationCommit, changes } = await fetchChanges(
-        client,
-        pullRequest,
-      );
+      const { iteration, baseCommit, iterationCommit, changes } =
+        await fetchChanges(client, pullRequest);
       return buildFileTree(
         changes.map((change) => ({
           ...change,
           pullRequest,
+          iteration,
           baseCommit,
           iterationCommit,
         })),

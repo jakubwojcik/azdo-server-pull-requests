@@ -57,7 +57,12 @@ export function changeKind(
 export async function fetchChanges(
   client: AzdoClient,
   { pullRequestId, repository }: PullRequest,
-): Promise<{ baseCommit: string; iterationCommit: string; changes: Change[] }> {
+): Promise<{
+  iteration: number;
+  baseCommit: string;
+  iterationCommit: string;
+  changes: Change[];
+}> {
   const path = `${repository.project.id}/_apis/git/repositories/${repository.id}/pullRequests/${pullRequestId}/iterations`;
   const { value: iterations } = await client.get<{
     value: {
@@ -81,6 +86,7 @@ export async function fetchChanges(
     changes.push(...page.changeEntries);
     if (!page.nextSkip) {
       return {
+        iteration: latest.id,
         baseCommit: latest.commonRefCommit.commitId,
         iterationCommit: latest.sourceRefCommit.commitId,
         changes,

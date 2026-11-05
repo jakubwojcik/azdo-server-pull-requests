@@ -6,3 +6,4 @@
 - List Assigned Pull Requests grouped by Repository.
 - Browse the Changes of a Pull Request as a folder tree.
 - Open the diff of a Change in the native diff editor.
+- Show Inline Threads in the diff editor.
