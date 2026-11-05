@@ -1,0 +1,13 @@
+{
+  "github.copilot.chat.commitMessageGeneration.instructions": [
+    {
+      "text": "Match the style of the recent commit messages: Conventional Commits, lowercase after the colon, imperative mood, subject at most 50 characters, no trailing period. Use the domain terms from GLOSSARY.md (Collection, Pull Request, Repository, Thread, Vote)."
+    },
+    {
+      "text": "Add a body, wrapped at 72 characters, only for a non-obvious why, using '-' bullets. Never use em or en dashes."
+    },
+    {
+      "text": "If the branch name starts with an issue number (for example 3-list-assigned-pull-requests), end the body with 'Closes #3' using that number."
+    }
+  ]
+}
