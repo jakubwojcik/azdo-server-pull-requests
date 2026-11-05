@@ -1,0 +1,100 @@
+{
+  "name": "azdo-server-pull-requests",
+  "displayName": "Azure DevOps Server Pull Requests",
+  "description": "Review pull requests on an on-premises Azure DevOps Server.",
+  "version": "0.0.1",
+  "publisher": "jakubwojcik",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jakubwojcik/azdo-server-pull-requests"
+  },
+  "categories": [
+    "SCM Providers"
+  ],
+  "engines": {
+    "vscode": "^1.140.0",
+    "node": ">=22.18"
+  },
+  "type": "module",
+  "main": "./dist/extension.cjs",
+  "activationEvents": [],
+  "contributes": {
+    "configuration": {
+      "title": "Azure DevOps Server Pull Requests",
+      "properties": {
+        "azdoServerPullRequests.collectionUrl": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "URL of the Azure DevOps Server Collection, e.g. `https://tfs.example.com/tfs/DefaultCollection`."
+        },
+        "azdoServerPullRequests.apiVersion": {
+          "type": "string",
+          "default": "7.0",
+          "description": "REST api-version sent with every request."
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "azdoServerPullRequests.configureCollection",
+        "title": "Configure Collection",
+        "category": "Azure DevOps Server"
+      },
+      {
+        "command": "azdoServerPullRequests.updatePat",
+        "title": "Update PAT",
+        "category": "Azure DevOps Server"
+      },
+      {
+        "command": "azdoServerPullRequests.signOut",
+        "title": "Sign out",
+        "category": "Azure DevOps Server"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "azdoServerPullRequests",
+          "title": "Azure DevOps Server Pull Requests",
+          "icon": "media/activitybar.svg"
+        }
+      ]
+    },
+    "views": {
+      "azdoServerPullRequests": [
+        {
+          "id": "azdoServerPullRequests.assigned",
+          "name": "Assigned Pull Requests"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "azdoServerPullRequests.assigned",
+        "contents": "Connect to your Azure DevOps Server Collection to review the Pull Requests assigned to you.\n[Configure Collection](command:azdoServerPullRequests.configureCollection)",
+        "when": "azdoServerPullRequests.unconfigured"
+      }
+    ]
+  },
+  "scripts": {
+    "build": "esbuild src/extension.ts --bundle --outfile=dist/extension.cjs --external:vscode --format=cjs --platform=node --target=node22 --sourcemap",
+    "watch": "npm run build -- --watch",
+    "vscode:prepublish": "npm run build -- --minify",
+    "typecheck": "tsc",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "node --test 'src/**/*.test.ts'"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "@types/vscode": "~1.140.0",
+    "esbuild": "^0.28.2",
+    "eslint": "^10.14.0",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.9.10",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.72.1"
+  }
+}
