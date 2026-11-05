@@ -53,16 +53,17 @@ export function createClient(
   const base = collectionUrl.replace(/\/+$/, '');
   const authorization = `Basic ${Buffer.from(`:${pat}`).toString('base64')}`;
 
-  async function send<T>(
+  async function send(
     path: string,
-    params: Record<string, string> = {},
-  ): Promise<T> {
+    params: Record<string, string>,
+    accept = 'application/json',
+  ): Promise<Response> {
     const url = new URL(`${base}/${path}`);
     for (const [key, value] of Object.entries(params)) {
       url.searchParams.set(key, value);
     }
     const response = await fetchFn(url, {
-      headers: { Authorization: authorization, Accept: 'application/json' },
+      headers: { Authorization: authorization, Accept: accept },
     });
     log.debug(`GET ${url} ${response.status}`);
     if (!response.ok) {
@@ -71,14 +72,27 @@ export function createClient(
         `GET ${url} failed: ${response.status} ${response.statusText}`,
       );
     }
-    return (await response.json()) as T;
+    return response;
   }
+
+  const withVersion = (params: Record<string, string>) => ({
+    ...params,
+    'api-version': apiVersion,
+  });
 
   return {
     // connectionData rejects api-version=7.0 with 400 on Azure DevOps Server.
-    connectionData: () => send<ConnectionData>('_apis/connectionData'),
-    get: <T>(path: string, params: Record<string, string> = {}) =>
-      send<T>(path, { ...params, 'api-version': apiVersion }),
+    connectionData: async () =>
+      (await (await send('_apis/connectionData', {})).json()) as ConnectionData,
+    get: async <T>(path: string, params: Record<string, string> = {}) =>
+      (await (await send(path, withVersion(params))).json()) as T,
+    getBytes: async (path: string, params: Record<string, string>) =>
+      new Uint8Array(
+        await (
+          await send(path, withVersion(params), 'text/plain')
+        ).arrayBuffer(),
+      ),
+    collectionUrl: base,
   };
 }
 

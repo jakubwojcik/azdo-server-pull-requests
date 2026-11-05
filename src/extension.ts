@@ -1,5 +1,11 @@
 import * as vscode from 'vscode';
-import { createClient, HttpError, type PullRequest } from './client.ts';
+import {
+  createClient,
+  HttpError,
+  type AzdoClient,
+  type PullRequest,
+} from './client.ts';
+import { registerDiffEditor } from './diffEditor.ts';
 import { createAssignedTree } from './tree.ts';
 
 const SECTION = 'azdoServerPullRequests';
@@ -10,8 +16,9 @@ export function activate(context: vscode.ExtensionContext) {
     'Azure DevOps Server Pull Requests',
     { log: true },
   );
-  const tree = createAssignedTree(report);
   let generation = 0;
+  let activeClient: AzdoClient | undefined;
+  const tree = createAssignedTree(() => activeClient, report);
 
   async function signIn() {
     const current = ++generation;
@@ -33,6 +40,7 @@ export function activate(context: vscode.ExtensionContext) {
       unconfigured,
     );
     if (unconfigured) {
+      activeClient = undefined;
       tree.clear();
       log.info('Collection URL or PAT not configured');
       return;
@@ -54,12 +62,12 @@ export function activate(context: vscode.ExtensionContext) {
         },
       );
       if (current !== generation) return;
+      activeClient = client;
       tree.show(
         value.filter((pullRequest) =>
           pullRequest.reviewers.some((reviewer) => reviewer.id === user.id),
         ),
         user.id,
-        client,
       );
       await vscode.commands.executeCommand(
         'setContext',
@@ -68,6 +76,7 @@ export function activate(context: vscode.ExtensionContext) {
       );
     } catch (error) {
       if (current !== generation) return;
+      activeClient = undefined;
       tree.clear();
       await report(error);
     }
@@ -135,6 +144,7 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     log,
     tree,
+    registerDiffEditor(() => activeClient, report),
     vscode.window.registerTreeDataProvider(
       `${SECTION}.assigned`,
       tree.provider,

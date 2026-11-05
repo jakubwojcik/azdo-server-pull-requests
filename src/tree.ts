@@ -1,17 +1,18 @@
 import * as vscode from 'vscode';
-import type { AzdoClient, Change, PullRequest } from './client.ts';
+import type { AzdoClient, PullRequest } from './client.ts';
 import {
   buildFileTree,
   changeKind,
   fetchChanges,
   type FileTreeNode,
 } from './changes.ts';
+import { OPEN_CHANGE_COMMAND, type PullRequestChange } from './diffEditor.ts';
 import { groupByRepository, type RepositoryGroup } from './pullRequests.ts';
 
 type Node =
   | { kind: 'repository'; group: RepositoryGroup }
   | { kind: 'pullRequest'; pullRequest: PullRequest }
-  | FileTreeNode;
+  | FileTreeNode<PullRequestChange>;
 
 const VOTES: Record<number, { label: string; color?: string }> = {
   10: { label: 'Approved', color: 'charts.green' },
@@ -77,25 +78,44 @@ function folderItem(name: string) {
   return item;
 }
 
-function changeItem(name: string, change: Change) {
+function changeItem(name: string, change: PullRequestChange) {
   const [icon, color] = CHANGE_ICONS[changeKind(change.changeType)];
   const item = new vscode.TreeItem(name);
   item.iconPath = new vscode.ThemeIcon(icon, new vscode.ThemeColor(color));
   item.description = change.originalPath;
   item.tooltip = change.item.path;
+  item.command = {
+    command: OPEN_CHANGE_COMMAND,
+    title: 'Open Change',
+    arguments: [change],
+  };
   return item;
 }
 
-export function createAssignedTree(report: (error: unknown) => unknown) {
+export function createAssignedTree(
+  getClient: () => AzdoClient | undefined,
+  report: (error: unknown) => unknown,
+) {
   const changed = new vscode.EventEmitter<void>();
   let groups: RepositoryGroup[] = [];
   let userId = '';
-  let client: AzdoClient | undefined;
 
   async function changes(pullRequest: PullRequest): Promise<Node[]> {
+    const client = getClient();
     if (!client) return [];
     try {
-      return buildFileTree(await fetchChanges(client, pullRequest));
+      const { baseCommit, iterationCommit, changes } = await fetchChanges(
+        client,
+        pullRequest,
+      );
+      return buildFileTree(
+        changes.map((change) => ({
+          ...change,
+          pullRequest,
+          baseCommit,
+          iterationCommit,
+        })),
+      );
     } catch (error) {
       void report(error);
       return [];
@@ -139,19 +159,13 @@ export function createAssignedTree(report: (error: unknown) => unknown) {
   return {
     provider,
     dispose: () => changed.dispose(),
-    show(
-      pullRequests: PullRequest[],
-      currentUserId: string,
-      currentClient: AzdoClient,
-    ) {
+    show(pullRequests: PullRequest[], currentUserId: string) {
       groups = groupByRepository(pullRequests);
       userId = currentUserId;
-      client = currentClient;
       changed.fire();
     },
     clear() {
       groups = [];
-      client = undefined;
       changed.fire();
     },
   };

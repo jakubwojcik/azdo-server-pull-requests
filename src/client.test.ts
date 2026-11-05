@@ -88,3 +88,29 @@ test('a rejected PAT surfaces as an HttpError with status 401', async () => {
     return true;
   });
 });
+
+test('getBytes requests plain content with the api-version and returns raw bytes', async () => {
+  const requests: { url: string; headers: Headers }[] = [];
+  const fetch = async (input: string | URL | Request, init?: RequestInit) => {
+    requests.push({ url: String(input), headers: new Headers(init?.headers) });
+    return new Response(new Uint8Array([0x68, 0x00, 0x69]));
+  };
+  const client = createClient(
+    'https://tfs.example.com/tfs/DefaultCollection',
+    'secret',
+    '7.0',
+    log,
+    fetch,
+  );
+
+  const bytes = await client.getBytes('Shop/_apis/git/repositories/web/items', {
+    path: '/a.png',
+  });
+
+  assert.deepEqual([...bytes], [0x68, 0x00, 0x69]);
+  assert.equal(
+    requests[0].url,
+    'https://tfs.example.com/tfs/DefaultCollection/Shop/_apis/git/repositories/web/items?path=%2Fa.png&api-version=7.0',
+  );
+  assert.equal(requests[0].headers.get('accept'), 'text/plain');
+});
