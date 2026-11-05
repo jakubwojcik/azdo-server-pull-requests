@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
-import { createClient, HttpError } from './client.ts';
+import { createClient, HttpError, type PullRequest } from './client.ts';
+import { createAssignedTree } from './tree.ts';
 
 const SECTION = 'azdoServerPullRequests';
 const PAT_KEY = `${SECTION}.pat`;
@@ -9,10 +10,16 @@ export function activate(context: vscode.ExtensionContext) {
     'Azure DevOps Server Pull Requests',
     { log: true },
   );
+  const tree = createAssignedTree();
   let generation = 0;
 
   async function signIn() {
     const current = ++generation;
+    await vscode.commands.executeCommand(
+      'setContext',
+      `${SECTION}.loaded`,
+      false,
+    );
     const config = vscode.workspace.getConfiguration(SECTION);
     const collectionUrl = config.get<string>('collectionUrl', '');
     const apiVersion = config.get<string>('apiVersion', '7.0');
@@ -26,6 +33,7 @@ export function activate(context: vscode.ExtensionContext) {
       unconfigured,
     );
     if (unconfigured) {
+      tree.show([], '');
       log.info('Collection URL or PAT not configured');
       return;
     }
@@ -37,8 +45,29 @@ export function activate(context: vscode.ExtensionContext) {
       log.info(
         `Signed in as ${user.customDisplayName ?? user.providerDisplayName}`,
       );
+      const { value } = await client.get<{ value: PullRequest[] }>(
+        '_apis/git/pullrequests',
+        {
+          'searchCriteria.reviewerId': user.id,
+          'searchCriteria.status': 'active',
+          $top: '500',
+        },
+      );
+      if (current !== generation) return;
+      tree.show(
+        value.filter((pullRequest) =>
+          pullRequest.reviewers.some((reviewer) => reviewer.id === user.id),
+        ),
+        user.id,
+      );
+      await vscode.commands.executeCommand(
+        'setContext',
+        `${SECTION}.loaded`,
+        true,
+      );
     } catch (error) {
       if (current !== generation) return;
+      tree.show([], '');
       const cause = (error as Error).cause as NodeJS.ErrnoException | undefined;
       const message =
         error instanceof Error
@@ -53,7 +82,7 @@ export function activate(context: vscode.ExtensionContext) {
         if (action) await updatePat();
       } else {
         const action = await vscode.window.showErrorMessage(
-          `Could not sign in to the Collection: ${message}`,
+          `Request to the Collection failed: ${message}`,
           'Show log',
         );
         if (action) log.show();
@@ -100,10 +129,11 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     log,
-    vscode.window.registerTreeDataProvider(`${SECTION}.assigned`, {
-      getChildren: () => [],
-      getTreeItem: (item: vscode.TreeItem) => item,
-    }),
+    tree,
+    vscode.window.registerTreeDataProvider(
+      `${SECTION}.assigned`,
+      tree.provider,
+    ),
     vscode.commands.registerCommand(
       `${SECTION}.configureCollection`,
       configureCollection,

@@ -10,6 +10,23 @@ export interface ConnectionData {
   authenticatedUser: Identity;
 }
 
+export interface Repository {
+  id: string;
+  name: string;
+  project: { name: string };
+}
+
+export interface PullRequest {
+  pullRequestId: number;
+  title: string;
+  isDraft: boolean;
+  createdBy: { displayName: string };
+  repository: Repository;
+  reviewers: { id: string; vote: number }[];
+  sourceRefName: string;
+  targetRefName: string;
+}
+
 export class HttpError extends Error {
   readonly status: number;
 

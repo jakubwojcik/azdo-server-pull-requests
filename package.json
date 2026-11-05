@@ -74,6 +74,11 @@
         "view": "azdoServerPullRequests.assigned",
         "contents": "Connect to your Azure DevOps Server Collection to review the Pull Requests assigned to you.\n[Configure Collection](command:azdoServerPullRequests.configureCollection)",
         "when": "azdoServerPullRequests.unconfigured"
+      },
+      {
+        "view": "azdoServerPullRequests.assigned",
+        "contents": "No active Pull Requests are assigned to you.",
+        "when": "azdoServerPullRequests.loaded"
       }
     ]
   },
