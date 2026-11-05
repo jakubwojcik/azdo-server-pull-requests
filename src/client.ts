@@ -13,7 +13,7 @@ export interface ConnectionData {
 export interface Repository {
   id: string;
   name: string;
-  project: { name: string };
+  project: { id: string; name: string };
 }
 
 export interface PullRequest {
@@ -25,6 +25,13 @@ export interface PullRequest {
   reviewers: { id: string; vote: number }[];
   sourceRefName: string;
   targetRefName: string;
+}
+
+export interface Change {
+  changeTrackingId: number;
+  changeType: string;
+  item: { path: string; isFolder?: boolean };
+  originalPath?: string;
 }
 
 export class HttpError extends Error {
@@ -74,3 +81,5 @@ export function createClient(
       send<T>(path, { ...params, 'api-version': apiVersion }),
   };
 }
+
+export type AzdoClient = ReturnType<typeof createClient>;

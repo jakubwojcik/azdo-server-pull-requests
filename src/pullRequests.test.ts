@@ -16,7 +16,7 @@ function pullRequest(
     repository: {
       id: `${project}/${repository}`,
       name: repository,
-      project: { name: project },
+      project: { id: project, name: project },
     },
     reviewers: [],
     sourceRefName: 'refs/heads/feature',

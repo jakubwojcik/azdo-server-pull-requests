@@ -10,7 +10,7 @@ export function activate(context: vscode.ExtensionContext) {
     'Azure DevOps Server Pull Requests',
     { log: true },
   );
-  const tree = createAssignedTree();
+  const tree = createAssignedTree(report);
   let generation = 0;
 
   async function signIn() {
@@ -33,7 +33,7 @@ export function activate(context: vscode.ExtensionContext) {
       unconfigured,
     );
     if (unconfigured) {
-      tree.show([], '');
+      tree.clear();
       log.info('Collection URL or PAT not configured');
       return;
     }
@@ -59,6 +59,7 @@ export function activate(context: vscode.ExtensionContext) {
           pullRequest.reviewers.some((reviewer) => reviewer.id === user.id),
         ),
         user.id,
+        client,
       );
       await vscode.commands.executeCommand(
         'setContext',
@@ -67,26 +68,30 @@ export function activate(context: vscode.ExtensionContext) {
       );
     } catch (error) {
       if (current !== generation) return;
-      tree.show([], '');
-      const cause = (error as Error).cause as NodeJS.ErrnoException | undefined;
-      const message =
-        error instanceof Error
-          ? `${error.message}${cause ? ` (${cause.code ?? cause.message})` : ''}`
-          : String(error);
-      log.error(message);
-      if (error instanceof HttpError && error.status === 401) {
-        const action = await vscode.window.showErrorMessage(
-          'The Collection rejected the PAT.',
-          'Update PAT',
-        );
-        if (action) await updatePat();
-      } else {
-        const action = await vscode.window.showErrorMessage(
-          `Request to the Collection failed: ${message}`,
-          'Show log',
-        );
-        if (action) log.show();
-      }
+      tree.clear();
+      await report(error);
+    }
+  }
+
+  async function report(error: unknown) {
+    const cause = (error as Error).cause as NodeJS.ErrnoException | undefined;
+    const message =
+      error instanceof Error
+        ? `${error.message}${cause ? ` (${cause.code ?? cause.message})` : ''}`
+        : String(error);
+    log.error(message);
+    if (error instanceof HttpError && error.status === 401) {
+      const action = await vscode.window.showErrorMessage(
+        'The Collection rejected the PAT.',
+        'Update PAT',
+      );
+      if (action) await updatePat();
+    } else {
+      const action = await vscode.window.showErrorMessage(
+        `Request to the Collection failed: ${message}`,
+        'Show log',
+      );
+      if (action) log.show();
     }
   }
 

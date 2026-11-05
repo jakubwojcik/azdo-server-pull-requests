@@ -1,8 +1,17 @@
 import * as vscode from 'vscode';
-import type { PullRequest } from './client.ts';
+import type { AzdoClient, Change, PullRequest } from './client.ts';
+import {
+  buildFileTree,
+  changeKind,
+  fetchChanges,
+  type FileTreeNode,
+} from './changes.ts';
 import { groupByRepository, type RepositoryGroup } from './pullRequests.ts';
 
-type Node = RepositoryGroup | PullRequest;
+type Node =
+  | { kind: 'repository'; group: RepositoryGroup }
+  | { kind: 'pullRequest'; pullRequest: PullRequest }
+  | FileTreeNode;
 
 const VOTES: Record<number, { label: string; color?: string }> = {
   10: { label: 'Approved', color: 'charts.green' },
@@ -10,6 +19,13 @@ const VOTES: Record<number, { label: string; color?: string }> = {
   0: { label: 'No vote' },
   [-5]: { label: 'Waiting for author', color: 'charts.yellow' },
   [-10]: { label: 'Rejected', color: 'charts.red' },
+};
+
+const CHANGE_ICONS = {
+  added: ['diff-added', 'gitDecoration.addedResourceForeground'],
+  edited: ['diff-modified', 'gitDecoration.modifiedResourceForeground'],
+  deleted: ['diff-removed', 'gitDecoration.deletedResourceForeground'],
+  renamed: ['diff-renamed', 'gitDecoration.renamedResourceForeground'],
 };
 
 function repositoryItem({ repository }: RepositoryGroup) {
@@ -31,6 +47,7 @@ function pullRequestItem(pullRequest: PullRequest, userId: string) {
 
   const item = new vscode.TreeItem(
     pullRequest.isDraft ? `[Draft] ${pullRequest.title}` : pullRequest.title,
+    vscode.TreeItemCollapsibleState.Collapsed,
   );
   item.description = `!${pullRequest.pullRequestId} · ${author} · ${vote.label}`;
   item.iconPath = new vscode.ThemeIcon(
@@ -51,27 +68,90 @@ function pullRequestItem(pullRequest: PullRequest, userId: string) {
   return item;
 }
 
-export function createAssignedTree() {
+function folderItem(name: string) {
+  const item = new vscode.TreeItem(
+    name,
+    vscode.TreeItemCollapsibleState.Expanded,
+  );
+  item.iconPath = vscode.ThemeIcon.Folder;
+  return item;
+}
+
+function changeItem(name: string, change: Change) {
+  const [icon, color] = CHANGE_ICONS[changeKind(change.changeType)];
+  const item = new vscode.TreeItem(name);
+  item.iconPath = new vscode.ThemeIcon(icon, new vscode.ThemeColor(color));
+  item.description = change.originalPath;
+  item.tooltip = change.item.path;
+  return item;
+}
+
+export function createAssignedTree(report: (error: unknown) => unknown) {
   const changed = new vscode.EventEmitter<void>();
   let groups: RepositoryGroup[] = [];
   let userId = '';
+  let client: AzdoClient | undefined;
+
+  async function changes(pullRequest: PullRequest): Promise<Node[]> {
+    if (!client) return [];
+    try {
+      return buildFileTree(await fetchChanges(client, pullRequest));
+    } catch (error) {
+      void report(error);
+      return [];
+    }
+  }
 
   const provider: vscode.TreeDataProvider<Node> = {
     onDidChangeTreeData: changed.event,
-    getChildren: (node) =>
-      !node ? groups : 'pullRequests' in node ? node.pullRequests : [],
-    getTreeItem: (node) =>
-      'pullRequests' in node
-        ? repositoryItem(node)
-        : pullRequestItem(node, userId),
+    getChildren(node) {
+      if (!node) {
+        return groups.map((group) => ({ kind: 'repository', group }));
+      }
+      switch (node.kind) {
+        case 'repository':
+          return node.group.pullRequests.map((pullRequest) => ({
+            kind: 'pullRequest',
+            pullRequest,
+          }));
+        case 'pullRequest':
+          return changes(node.pullRequest);
+        case 'folder':
+          return node.children;
+        case 'file':
+          return [];
+      }
+    },
+    getTreeItem(node) {
+      switch (node.kind) {
+        case 'repository':
+          return repositoryItem(node.group);
+        case 'pullRequest':
+          return pullRequestItem(node.pullRequest, userId);
+        case 'folder':
+          return folderItem(node.name);
+        case 'file':
+          return changeItem(node.name, node.change);
+      }
+    },
   };
 
   return {
     provider,
     dispose: () => changed.dispose(),
-    show(pullRequests: PullRequest[], currentUserId: string) {
+    show(
+      pullRequests: PullRequest[],
+      currentUserId: string,
+      currentClient: AzdoClient,
+    ) {
       groups = groupByRepository(pullRequests);
       userId = currentUserId;
+      client = currentClient;
+      changed.fire();
+    },
+    clear() {
+      groups = [];
+      client = undefined;
       changed.fire();
     },
   };
