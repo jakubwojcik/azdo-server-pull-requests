@@ -35,6 +35,7 @@ function repositoryItem({ repository }: RepositoryGroup) {
     vscode.TreeItemCollapsibleState.Expanded,
   );
   item.description = repository.project.name;
+  item.id = repository.id;
   item.iconPath = new vscode.ThemeIcon('repo');
   return item;
 }
@@ -51,6 +52,8 @@ function pullRequestItem(pullRequest: PullRequest, userId: string) {
     vscode.TreeItemCollapsibleState.Collapsed,
   );
   item.description = `!${pullRequest.pullRequestId} · ${author} · ${vote.label}`;
+  item.id = `${pullRequest.repository.id}/${pullRequest.pullRequestId}`;
+  item.contextValue = pullRequest.isDraft ? 'draftPullRequest' : 'pullRequest';
   item.iconPath = new vscode.ThemeIcon(
     pullRequest.isDraft ? 'git-pull-request-draft' : 'git-pull-request',
     vote.color ? new vscode.ThemeColor(vote.color) : undefined,

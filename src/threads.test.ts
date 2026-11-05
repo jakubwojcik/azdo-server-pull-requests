@@ -166,3 +166,10 @@ test('a new Inline Thread is sent the way the web UI sends it', () => {
     },
   });
 });
+
+test('a General Thread has no file anchor', () => {
+  assert.deepEqual(newThread('Looks good'), {
+    comments: [{ parentCommentId: 0, content: 'Looks good', commentType: 1 }],
+    status: 1,
+  });
+});

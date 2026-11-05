@@ -1,4 +1,5 @@
 import type { AzdoClient, Change, PullRequest } from './client.ts';
+import { pullRequestPath } from './pullRequests.ts';
 
 type Folder<T extends Change> = {
   kind: 'folder';
@@ -56,14 +57,14 @@ export function changeKind(
 
 export async function fetchChanges(
   client: AzdoClient,
-  { pullRequestId, repository }: PullRequest,
+  pullRequest: PullRequest,
 ): Promise<{
   iteration: number;
   baseCommit: string;
   iterationCommit: string;
   changes: Change[];
 }> {
-  const path = `${repository.project.id}/_apis/git/repositories/${repository.id}/pullRequests/${pullRequestId}/iterations`;
+  const path = `${pullRequestPath(pullRequest)}/iterations`;
   const { value: iterations } = await client.get<{
     value: {
       id: number;

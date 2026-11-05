@@ -24,3 +24,12 @@ export function groupByRepository(
       a.repository.project.name.localeCompare(b.repository.project.name),
   );
 }
+
+export const pullRequestPath = ({ pullRequestId, repository }: PullRequest) =>
+  `${repository.project.id}/_apis/git/repositories/${repository.id}/pullRequests/${pullRequestId}`;
+
+export const webUrl = (
+  collectionUrl: string,
+  { pullRequestId, repository }: PullRequest,
+) =>
+  `${collectionUrl}/${encodeURIComponent(repository.project.name)}/_git/${encodeURIComponent(repository.name)}/pullrequest/${pullRequestId}`;

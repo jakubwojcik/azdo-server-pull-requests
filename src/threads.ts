@@ -1,4 +1,5 @@
 import type { AzdoClient, PullRequest } from './client.ts';
+import { pullRequestPath } from './pullRequests.ts';
 
 interface Position {
   line: number;
@@ -58,8 +59,8 @@ export const STATUSES = [
   { name: 'pending', code: 6, label: 'Pending', resolved: false },
 ];
 
-export const threadsPath = ({ pullRequestId, repository }: PullRequest) =>
-  `${repository.project.id}/_apis/git/repositories/${repository.id}/pullRequests/${pullRequestId}/threads`;
+export const threadsPath = (pullRequest: PullRequest) =>
+  `${pullRequestPath(pullRequest)}/threads`;
 
 export function fileThreads(
   threads: Thread[],
@@ -104,7 +105,7 @@ export async function fetchThreads(
 
 export function newThread(
   content: string,
-  anchor: {
+  anchor?: {
     path: string;
     changeTrackingId: number;
     iteration: number;
@@ -112,10 +113,14 @@ export function newThread(
     lines: Lines;
   },
 ) {
-  const { path, changeTrackingId, iteration, side, lines } = anchor;
-  return {
+  const thread = {
     comments: [{ parentCommentId: 0, content, commentType: 1 }],
     status: 1,
+  };
+  if (!anchor) return thread;
+  const { path, changeTrackingId, iteration, side, lines } = anchor;
+  return {
+    ...thread,
     threadContext: {
       filePath: path,
       [`${side}FileStart`]: { line: lines.start, offset: 1 },

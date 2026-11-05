@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import type { PullRequest } from './client.ts';
-import { groupByRepository } from './pullRequests.ts';
+import { groupByRepository, webUrl } from './pullRequests.ts';
 
 function pullRequest(
   pullRequestId: number,
@@ -65,5 +65,17 @@ test('same-named Repositories in different Projects stay apart, ordered by Proje
   assert.deepEqual(
     groups.map((group) => group.repository.project.name),
     ['Billing', 'Sales'],
+  );
+});
+
+test('the web URL points at the Pull Request page with names escaped', () => {
+  const url = webUrl(
+    'https://tfs.example.com/tfs/DefaultCollection',
+    pullRequest(42, 'web app', 'My Project'),
+  );
+
+  assert.equal(
+    url,
+    'https://tfs.example.com/tfs/DefaultCollection/My%20Project/_git/web%20app/pullrequest/42',
   );
 });

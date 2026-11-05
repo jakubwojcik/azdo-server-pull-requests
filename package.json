@@ -95,6 +95,56 @@
         "title": "Change Status",
         "category": "Azure DevOps Server",
         "icon": "$(list-selection)"
+      },
+      {
+        "command": "azdoServerPullRequests.approve",
+        "title": "Approve",
+        "category": "Azure DevOps Server",
+        "icon": "$(check)"
+      },
+      {
+        "command": "azdoServerPullRequests.approveWithSuggestions",
+        "title": "Approve with suggestions",
+        "category": "Azure DevOps Server"
+      },
+      {
+        "command": "azdoServerPullRequests.waitForAuthor",
+        "title": "Wait for author",
+        "category": "Azure DevOps Server"
+      },
+      {
+        "command": "azdoServerPullRequests.reject",
+        "title": "Reject",
+        "category": "Azure DevOps Server",
+        "icon": "$(close)"
+      },
+      {
+        "command": "azdoServerPullRequests.resetVote",
+        "title": "Reset vote",
+        "category": "Azure DevOps Server"
+      },
+      {
+        "command": "azdoServerPullRequests.startGeneralThread",
+        "title": "Start General Thread",
+        "category": "Azure DevOps Server",
+        "icon": "$(comment)"
+      },
+      {
+        "command": "azdoServerPullRequests.openInBrowser",
+        "title": "Open in Browser",
+        "category": "Azure DevOps Server",
+        "icon": "$(link-external)"
+      },
+      {
+        "command": "azdoServerPullRequests.copyUrl",
+        "title": "Copy URL",
+        "category": "Azure DevOps Server"
+      },
+      {
+        "command": "azdoServerPullRequests.refresh",
+        "title": "Refresh",
+        "category": "Azure DevOps Server",
+        "icon": "$(refresh)"
       }
     ],
     "viewsContainers": {
@@ -159,6 +209,38 @@
         {
           "command": "azdoServerPullRequests.changeThreadStatus",
           "when": "false"
+        },
+        {
+          "command": "azdoServerPullRequests.approve",
+          "when": "false"
+        },
+        {
+          "command": "azdoServerPullRequests.approveWithSuggestions",
+          "when": "false"
+        },
+        {
+          "command": "azdoServerPullRequests.waitForAuthor",
+          "when": "false"
+        },
+        {
+          "command": "azdoServerPullRequests.reject",
+          "when": "false"
+        },
+        {
+          "command": "azdoServerPullRequests.resetVote",
+          "when": "false"
+        },
+        {
+          "command": "azdoServerPullRequests.startGeneralThread",
+          "when": "false"
+        },
+        {
+          "command": "azdoServerPullRequests.openInBrowser",
+          "when": "false"
+        },
+        {
+          "command": "azdoServerPullRequests.copyUrl",
+          "when": "false"
         }
       ],
       "comments/commentThread/context": [
@@ -207,6 +289,65 @@
           "command": "azdoServerPullRequests.cancelEdit",
           "group": "inline@2",
           "when": "commentController == azdoServerPullRequests"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "azdoServerPullRequests.refresh",
+          "group": "navigation",
+          "when": "view == azdoServerPullRequests.assigned"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "azdoServerPullRequests.approve",
+          "group": "inline@1",
+          "when": "view == azdoServerPullRequests.assigned && viewItem == pullRequest"
+        },
+        {
+          "command": "azdoServerPullRequests.reject",
+          "group": "inline@2",
+          "when": "view == azdoServerPullRequests.assigned && viewItem == pullRequest"
+        },
+        {
+          "command": "azdoServerPullRequests.approve",
+          "group": "1_vote@1",
+          "when": "view == azdoServerPullRequests.assigned && viewItem == pullRequest"
+        },
+        {
+          "command": "azdoServerPullRequests.approveWithSuggestions",
+          "group": "1_vote@2",
+          "when": "view == azdoServerPullRequests.assigned && viewItem == pullRequest"
+        },
+        {
+          "command": "azdoServerPullRequests.waitForAuthor",
+          "group": "1_vote@3",
+          "when": "view == azdoServerPullRequests.assigned && viewItem == pullRequest"
+        },
+        {
+          "command": "azdoServerPullRequests.reject",
+          "group": "1_vote@4",
+          "when": "view == azdoServerPullRequests.assigned && viewItem == pullRequest"
+        },
+        {
+          "command": "azdoServerPullRequests.resetVote",
+          "group": "1_vote@5",
+          "when": "view == azdoServerPullRequests.assigned && viewItem == pullRequest"
+        },
+        {
+          "command": "azdoServerPullRequests.startGeneralThread",
+          "group": "2_discuss@1",
+          "when": "view == azdoServerPullRequests.assigned && viewItem =~ /^(draftP|p)ullRequest$/"
+        },
+        {
+          "command": "azdoServerPullRequests.openInBrowser",
+          "group": "3_share@1",
+          "when": "view == azdoServerPullRequests.assigned && viewItem =~ /^(draftP|p)ullRequest$/"
+        },
+        {
+          "command": "azdoServerPullRequests.copyUrl",
+          "group": "3_share@2",
+          "when": "view == azdoServerPullRequests.assigned && viewItem =~ /^(draftP|p)ullRequest$/"
         }
       ]
     }

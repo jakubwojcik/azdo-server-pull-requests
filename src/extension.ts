@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { createClient, HttpError, type PullRequest } from './client.ts';
 import { registerComments, type Session } from './comments.ts';
 import { registerDiffEditor } from './diffEditor.ts';
+import { registerPullRequestActions } from './pullRequestActions.ts';
 import { createAssignedTree } from './tree.ts';
 
 const SECTION = 'azdoServerPullRequests';
@@ -142,15 +143,21 @@ export function activate(context: vscode.ExtensionContext) {
     await context.secrets.store(PAT_KEY, pat);
   }
 
+  const view = vscode.window.createTreeView(`${SECTION}.assigned`, {
+    treeDataProvider: tree.provider,
+  });
+
   context.subscriptions.push(
     log,
     tree,
     comments.disposable,
     registerDiffEditor(() => session?.client, report, comments.show),
-    vscode.window.registerTreeDataProvider(
-      `${SECTION}.assigned`,
-      tree.provider,
-    ),
+    view,
+    view.onDidChangeVisibility(({ visible }) => {
+      if (visible) void signIn();
+    }),
+    registerPullRequestActions(() => session, report, signIn),
+    vscode.commands.registerCommand(`${SECTION}.refresh`, signIn),
     vscode.commands.registerCommand(
       `${SECTION}.configureCollection`,
       configureCollection,
