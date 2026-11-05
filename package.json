@@ -50,6 +50,51 @@
         "command": "azdoServerPullRequests.signOut",
         "title": "Sign out",
         "category": "Azure DevOps Server"
+      },
+      {
+        "command": "azdoServerPullRequests.reply",
+        "title": "Comment",
+        "category": "Azure DevOps Server"
+      },
+      {
+        "command": "azdoServerPullRequests.editComment",
+        "title": "Edit",
+        "category": "Azure DevOps Server",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "azdoServerPullRequests.deleteComment",
+        "title": "Delete",
+        "category": "Azure DevOps Server",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "azdoServerPullRequests.saveComment",
+        "title": "Save",
+        "category": "Azure DevOps Server"
+      },
+      {
+        "command": "azdoServerPullRequests.cancelEdit",
+        "title": "Cancel",
+        "category": "Azure DevOps Server"
+      },
+      {
+        "command": "azdoServerPullRequests.resolveThread",
+        "title": "Resolve",
+        "category": "Azure DevOps Server",
+        "icon": "$(check)"
+      },
+      {
+        "command": "azdoServerPullRequests.reactivateThread",
+        "title": "Reactivate",
+        "category": "Azure DevOps Server",
+        "icon": "$(issue-reopened)"
+      },
+      {
+        "command": "azdoServerPullRequests.changeThreadStatus",
+        "title": "Change Status",
+        "category": "Azure DevOps Server",
+        "icon": "$(list-selection)"
       }
     ],
     "viewsContainers": {
@@ -80,7 +125,91 @@
         "contents": "No active Pull Requests are assigned to you.",
         "when": "azdoServerPullRequests.loaded"
       }
-    ]
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "azdoServerPullRequests.reply",
+          "when": "false"
+        },
+        {
+          "command": "azdoServerPullRequests.editComment",
+          "when": "false"
+        },
+        {
+          "command": "azdoServerPullRequests.deleteComment",
+          "when": "false"
+        },
+        {
+          "command": "azdoServerPullRequests.saveComment",
+          "when": "false"
+        },
+        {
+          "command": "azdoServerPullRequests.cancelEdit",
+          "when": "false"
+        },
+        {
+          "command": "azdoServerPullRequests.resolveThread",
+          "when": "false"
+        },
+        {
+          "command": "azdoServerPullRequests.reactivateThread",
+          "when": "false"
+        },
+        {
+          "command": "azdoServerPullRequests.changeThreadStatus",
+          "when": "false"
+        }
+      ],
+      "comments/commentThread/context": [
+        {
+          "command": "azdoServerPullRequests.reply",
+          "group": "inline",
+          "when": "commentController == azdoServerPullRequests"
+        }
+      ],
+      "comments/commentThread/title": [
+        {
+          "command": "azdoServerPullRequests.resolveThread",
+          "group": "inline@1",
+          "when": "commentController == azdoServerPullRequests && commentThread == unresolved"
+        },
+        {
+          "command": "azdoServerPullRequests.reactivateThread",
+          "group": "inline@1",
+          "when": "commentController == azdoServerPullRequests && commentThread == resolved"
+        },
+        {
+          "command": "azdoServerPullRequests.changeThreadStatus",
+          "group": "inline@2",
+          "when": "commentController == azdoServerPullRequests && commentThread"
+        }
+      ],
+      "comments/comment/title": [
+        {
+          "command": "azdoServerPullRequests.editComment",
+          "group": "inline@1",
+          "when": "commentController == azdoServerPullRequests && comment == own"
+        },
+        {
+          "command": "azdoServerPullRequests.deleteComment",
+          "group": "inline@2",
+          "when": "commentController == azdoServerPullRequests && comment == own"
+        }
+      ],
+      "comments/comment/context": [
+        {
+          "command": "azdoServerPullRequests.saveComment",
+          "group": "inline@1",
+          "when": "commentController == azdoServerPullRequests"
+        },
+        {
+          "command": "azdoServerPullRequests.cancelEdit",
+          "group": "inline@2",
+          "when": "commentController == azdoServerPullRequests"
+        }
+      ]
+    }
   },
   "scripts": {
     "build": "esbuild src/extension.ts --bundle --outfile=dist/extension.cjs --external:vscode --format=cjs --platform=node --target=node22 --sourcemap",

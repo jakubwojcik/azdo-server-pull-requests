@@ -114,3 +114,45 @@ test('getBytes requests plain content with the api-version and returns raw bytes
   );
   assert.equal(requests[0].headers.get('accept'), 'text/plain');
 });
+
+test('send writes a JSON body with the api-version and returns the parsed reply', async () => {
+  const requests: { url: string; init?: RequestInit }[] = [];
+  const fetch = async (input: string | URL | Request, init?: RequestInit) => {
+    requests.push({ url: String(input), init });
+    return new Response(JSON.stringify({ id: 7 }));
+  };
+  const client = createClient(
+    'https://tfs.example.com/tfs/DefaultCollection',
+    'secret',
+    '7.0',
+    log,
+    fetch,
+  );
+
+  const reply = await client.send('POST', 'p1/_apis/threads', { status: 1 });
+
+  assert.deepEqual(reply, { id: 7 });
+  assert.equal(
+    requests[0].url,
+    'https://tfs.example.com/tfs/DefaultCollection/p1/_apis/threads?api-version=7.0',
+  );
+  assert.equal(requests[0].init?.method, 'POST');
+  assert.equal(requests[0].init?.body, '{"status":1}');
+  assert.equal(
+    new Headers(requests[0].init?.headers).get('content-type'),
+    'application/json',
+  );
+});
+
+test('send resolves an empty reply to undefined', async () => {
+  const fetch = async () => new Response(null, { status: 204 });
+  const client = createClient(
+    'https://tfs.example.com/tfs/DefaultCollection',
+    'secret',
+    '7.0',
+    log,
+    fetch,
+  );
+
+  assert.equal(await client.send('DELETE', 'p1/_apis/threads/1'), undefined);
+});

@@ -1,8 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { fileThreads, type Thread } from './threads.ts';
+import { fileThreads, newThread, type Thread } from './threads.ts';
 
-const comment = { id: 1, author: { displayName: 'Ann' }, content: 'Hi' };
+const comment = {
+  id: 1,
+  author: { id: 'ann', displayName: 'Ann' },
+  content: 'Hi',
+};
 
 function thread(overrides: Partial<Thread>): Thread {
   return {
@@ -134,4 +138,31 @@ test('deleted Comments are dropped from a Thread', () => {
     mapped?.comments.map((c) => c.id),
     [2],
   );
+});
+
+test('a new Inline Thread is sent the way the web UI sends it', () => {
+  const body = newThread('Why?', {
+    path: '/src/a.ts',
+    changeTrackingId: 4,
+    iteration: 3,
+    side: 'left',
+    lines: { start: 7, end: 9 },
+  });
+
+  assert.deepEqual(body, {
+    comments: [{ parentCommentId: 0, content: 'Why?', commentType: 1 }],
+    status: 1,
+    threadContext: {
+      filePath: '/src/a.ts',
+      leftFileStart: { line: 7, offset: 1 },
+      leftFileEnd: { line: 9, offset: 1 },
+    },
+    pullRequestThreadContext: {
+      changeTrackingId: 4,
+      iterationContext: {
+        firstComparingIteration: 3,
+        secondComparingIteration: 3,
+      },
+    },
+  });
 });

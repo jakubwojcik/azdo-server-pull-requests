@@ -1,10 +1,6 @@
 import * as vscode from 'vscode';
-import {
-  createClient,
-  HttpError,
-  type AzdoClient,
-  type PullRequest,
-} from './client.ts';
+import { createClient, HttpError, type PullRequest } from './client.ts';
+import { registerComments, type Session } from './comments.ts';
 import { registerDiffEditor } from './diffEditor.ts';
 import { createAssignedTree } from './tree.ts';
 
@@ -17,8 +13,13 @@ export function activate(context: vscode.ExtensionContext) {
     { log: true },
   );
   let generation = 0;
-  let activeClient: AzdoClient | undefined;
-  const tree = createAssignedTree(() => activeClient, report);
+  let session: Session | undefined;
+  const tree = createAssignedTree(() => session?.client, report);
+  const comments = registerComments(
+    () => session,
+    report,
+    vscode.Uri.joinPath(context.extensionUri, 'media', 'like.svg'),
+  );
 
   async function signIn() {
     const current = ++generation;
@@ -40,7 +41,7 @@ export function activate(context: vscode.ExtensionContext) {
       unconfigured,
     );
     if (unconfigured) {
-      activeClient = undefined;
+      session = undefined;
       tree.clear();
       log.info('Collection URL or PAT not configured');
       return;
@@ -62,7 +63,7 @@ export function activate(context: vscode.ExtensionContext) {
         },
       );
       if (current !== generation) return;
-      activeClient = client;
+      session = { client, userId: user.id };
       tree.show(
         value.filter((pullRequest) =>
           pullRequest.reviewers.some((reviewer) => reviewer.id === user.id),
@@ -76,7 +77,7 @@ export function activate(context: vscode.ExtensionContext) {
       );
     } catch (error) {
       if (current !== generation) return;
-      activeClient = undefined;
+      session = undefined;
       tree.clear();
       await report(error);
     }
@@ -144,7 +145,8 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     log,
     tree,
-    registerDiffEditor(() => activeClient, report),
+    comments.disposable,
+    registerDiffEditor(() => session?.client, report, comments.show),
     vscode.window.registerTreeDataProvider(
       `${SECTION}.assigned`,
       tree.provider,
