@@ -2,11 +2,14 @@ import * as vscode from 'vscode';
 import type { AzdoClient } from './client.ts';
 import { changeKind } from './changes.ts';
 import type { ChangeUris, PullRequestChange } from './diffEditor.ts';
+import type { createThreadBadges } from './threadBadges.ts';
 import {
+  commentLabel,
   fetchThreads,
   fileThreads,
   newThread,
   STATUSES,
+  threadStatus,
   threadsPath,
   type FileThread,
   type Side,
@@ -36,13 +39,12 @@ interface PullRequestComment extends vscode.Comment {
 
 const PREFIX = 'azdoServerPullRequests';
 
-const statusCode = (name: string) =>
-  STATUSES.find((status) => status.name === name)?.code;
+const statusCode = (name: string) => threadStatus(name).code;
 
 export function registerComments(
   getSession: () => Session | undefined,
   report: (error: unknown) => unknown,
-  likeIcon: vscode.Uri,
+  badges: ReturnType<typeof createThreadBadges>,
 ) {
   const controller = vscode.comments.createCommentController(
     PREFIX,
@@ -57,44 +59,30 @@ export function registerComments(
     uri: vscode.Uri,
     userId: string,
   ) {
-    const status = STATUSES.find(({ name }) => name === thread.status) ?? {
-      label: 'Unknown',
-      resolved: true,
-    };
-    const created = controller.createCommentThread(
-      uri,
-      new vscode.Range((lines?.start ?? 1) - 1, 0, (lines?.end ?? 1) - 1, 0),
-      [],
-    );
-    created.comments = comments.map((comment): PullRequestComment => ({
-      thread: created,
+    const status = threadStatus(thread.status);
+    const items = comments.map((comment) => ({
       commentId: comment.id,
       content: comment.content ?? '',
       body: new vscode.MarkdownString(comment.content ?? ''),
       mode: vscode.CommentMode.Preview,
       author: { name: comment.author.displayName },
-      contextValue: comment.author.id === userId ? 'own' : undefined,
+      contextValue: [
+        comment.author.id === userId ? 'own' : 'other',
+        comment.usersLiked?.some((user) => user.id === userId)
+          ? 'liked'
+          : 'notLiked',
+      ].join(','),
       timestamp: comment.publishedDate
         ? new Date(comment.publishedDate)
         : undefined,
-      label:
-        comment.publishedDate &&
-        comment.lastContentUpdatedDate &&
-        new Date(comment.lastContentUpdatedDate) >
-          new Date(comment.publishedDate)
-          ? 'edited'
-          : undefined,
-      reactions: [
-        {
-          label: 'Like',
-          iconPath: likeIcon,
-          count: comment.usersLiked?.length ?? 0,
-          authorHasReacted: !!comment.usersLiked?.some(
-            (user) => user.id === userId,
-          ),
-        },
-      ],
+      label: commentLabel(comment, userId),
     }));
+    const created = controller.createCommentThread(
+      uri,
+      new vscode.Range((lines?.start ?? 1) - 1, 0, (lines?.end ?? 1) - 1, 0),
+      items,
+    );
+    for (const item of items) Object.assign(item, { thread: created });
     if (!lines) created.range = undefined;
     created.label = outdated ? `${status.label} · Outdated` : status.label;
     created.contextValue = status.resolved ? 'resolved' : 'unresolved';
@@ -117,6 +105,7 @@ export function registerComments(
       entry.pullRequest,
       entry.iteration,
     );
+    badges.update(entry.pullRequest, entry.iteration, threads);
     const kind = changeKind(entry.changeType);
     const sideOf = (side: Side) =>
       kind === 'added' ? 'right' : kind === 'deleted' ? 'left' : side;
@@ -197,14 +186,6 @@ export function registerComments(
         ? [new vscode.Range(0, 0, document.lineCount - 1, 0)]
         : [],
   };
-
-  controller.reactionHandler = async (comment, reaction) =>
-    onComment((_, client, path) =>
-      client.send(
-        reaction.authorHasReacted ? 'DELETE' : 'POST',
-        `${path}/likes`,
-      ),
-    )(comment as PullRequestComment);
 
   async function reply({ thread, text }: vscode.CommentReply) {
     const ref = refs.get(thread);
@@ -287,6 +268,22 @@ export function registerComments(
             );
           }
         },
+      ),
+      vscode.commands.registerCommand(`${PREFIX}.previousThread`, () =>
+        vscode.commands.executeCommand(
+          'editor.action.previousCommentThreadAction',
+        ),
+      ),
+      vscode.commands.registerCommand(`${PREFIX}.nextThread`, () =>
+        vscode.commands.executeCommand('editor.action.nextCommentThreadAction'),
+      ),
+      vscode.commands.registerCommand(
+        `${PREFIX}.like`,
+        onComment((_, client, path) => client.send('POST', `${path}/likes`)),
+      ),
+      vscode.commands.registerCommand(
+        `${PREFIX}.unlike`,
+        onComment((_, client, path) => client.send('DELETE', `${path}/likes`)),
       ),
       vscode.commands.registerCommand(
         `${PREFIX}.resolveThread`,

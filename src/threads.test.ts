@@ -1,6 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { fileThreads, newThread, type Thread } from './threads.ts';
+import {
+  activeThreadCounts,
+  commentLabel,
+  fileThreads,
+  newThread,
+  type Thread,
+} from './threads.ts';
 
 const comment = {
   id: 1,
@@ -109,6 +115,30 @@ test('a Thread on the file without lines is file-level on the Right', () => {
   ]);
 });
 
+test('a Thread the server tracked to line 0 is file-level and outdated', () => {
+  const lost = thread({
+    threadContext: {
+      filePath: '/src/a.ts',
+      rightFileStart: { line: 0, offset: 1 },
+      rightFileEnd: { line: 0, offset: 1 },
+    },
+    pullRequestThreadContext: {
+      iterationContext: {
+        firstComparingIteration: 1,
+        secondComparingIteration: 1,
+      },
+      trackingCriteria: {
+        firstComparingIteration: 3,
+        secondComparingIteration: 3,
+      },
+    },
+  });
+
+  assert.deepEqual(anchors([lost]), [
+    { side: 'right', lines: undefined, outdated: true },
+  ]);
+});
+
 test('Threads on other files, General Threads and deleted Threads are skipped', () => {
   const threads = [
     thread({ threadContext: { filePath: '/src/b.ts' } }),
@@ -172,4 +202,61 @@ test('a General Thread has no file anchor', () => {
     comments: [{ parentCommentId: 0, content: 'Looks good', commentType: 1 }],
     status: 1,
   });
+});
+
+test('the Comment label marks edits and names who liked it', () => {
+  const published = '2026-11-01T10:00:00Z';
+  const user = (id: string) => ({ id, displayName: id.toUpperCase() });
+
+  assert.equal(
+    commentLabel({ ...comment, publishedDate: published }, 'me'),
+    undefined,
+  );
+  assert.equal(
+    commentLabel(
+      {
+        ...comment,
+        publishedDate: published,
+        lastContentUpdatedDate: '2026-11-02T10:00:00Z',
+        usersLiked: [user('bob')],
+      },
+      'me',
+    ),
+    'edited · Liked by BOB',
+  );
+  assert.equal(
+    commentLabel(
+      {
+        ...comment,
+        usersLiked: [user('bob'), user('me'), user('cy'), user('di')],
+      },
+      'me',
+    ),
+    'Liked by you, BOB +2',
+  );
+});
+
+test('active Threads are counted per file', () => {
+  const counts = activeThreadCounts(
+    [
+      thread({}),
+      thread({ id: 2 }),
+      thread({ id: 3, status: 'fixed' }),
+      thread({
+        id: 4,
+        threadContext: { filePath: '/src/b.ts' },
+        status: 'pending',
+      }),
+      thread({ id: 5, threadContext: null }),
+    ],
+    3,
+  );
+
+  assert.deepEqual(
+    [...counts],
+    [
+      ['/src/a.ts', 2],
+      ['/src/b.ts', 1],
+    ],
+  );
 });

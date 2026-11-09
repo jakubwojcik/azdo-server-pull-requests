@@ -9,3 +9,4 @@ Threads created on an earlier iteration point at lines that may have moved after
 ## Consequences
 
 - Threads the server cannot track are shown as file-level threads labelled outdated.
+- The server marks such a thread with position line 0 and still fills `trackingCriteria` (verified 2026-11-06 on Azure DevOps Server, api-version 7.0: a thread on a line removed in a later iteration came back at `rightFileStart.line: 0`).

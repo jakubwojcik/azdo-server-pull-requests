@@ -89,8 +89,8 @@ export function registerDiffEditor(
     vscode.commands.registerCommand(
       OPEN_CHANGE_COMMAND,
       async (entry: PullRequestChange) => {
-        await openChange(entry);
         showThreads(entry, changeUris(entry));
+        await openChange(entry);
       },
     ),
   );

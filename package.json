@@ -79,6 +79,18 @@
         "category": "Azure DevOps Server"
       },
       {
+        "command": "azdoServerPullRequests.like",
+        "title": "Like",
+        "category": "Azure DevOps Server",
+        "icon": "$(thumbsup)"
+      },
+      {
+        "command": "azdoServerPullRequests.unlike",
+        "title": "Unlike",
+        "category": "Azure DevOps Server",
+        "icon": "$(thumbsup-filled)"
+      },
+      {
         "command": "azdoServerPullRequests.resolveThread",
         "title": "Resolve",
         "category": "Azure DevOps Server",
@@ -145,6 +157,18 @@
         "title": "Refresh",
         "category": "Azure DevOps Server",
         "icon": "$(refresh)"
+      },
+      {
+        "command": "azdoServerPullRequests.previousThread",
+        "title": "Previous Thread",
+        "category": "Azure DevOps Server",
+        "icon": "$(chevron-up)"
+      },
+      {
+        "command": "azdoServerPullRequests.nextThread",
+        "title": "Next Thread",
+        "category": "Azure DevOps Server",
+        "icon": "$(chevron-down)"
       }
     ],
     "viewsContainers": {
@@ -241,6 +265,22 @@
         {
           "command": "azdoServerPullRequests.copyUrl",
           "when": "false"
+        },
+        {
+          "command": "azdoServerPullRequests.like",
+          "when": "false"
+        },
+        {
+          "command": "azdoServerPullRequests.unlike",
+          "when": "false"
+        },
+        {
+          "command": "azdoServerPullRequests.previousThread",
+          "when": "resourceScheme == azdo-server-pr"
+        },
+        {
+          "command": "azdoServerPullRequests.nextThread",
+          "when": "resourceScheme == azdo-server-pr"
         }
       ],
       "comments/commentThread/context": [
@@ -269,14 +309,24 @@
       ],
       "comments/comment/title": [
         {
+          "command": "azdoServerPullRequests.like",
+          "group": "inline@0",
+          "when": "commentController == azdoServerPullRequests && comment =~ /,notLiked$/"
+        },
+        {
+          "command": "azdoServerPullRequests.unlike",
+          "group": "inline@0",
+          "when": "commentController == azdoServerPullRequests && comment =~ /,liked$/"
+        },
+        {
           "command": "azdoServerPullRequests.editComment",
           "group": "inline@1",
-          "when": "commentController == azdoServerPullRequests && comment == own"
+          "when": "commentController == azdoServerPullRequests && comment =~ /^own,/"
         },
         {
           "command": "azdoServerPullRequests.deleteComment",
           "group": "inline@2",
-          "when": "commentController == azdoServerPullRequests && comment == own"
+          "when": "commentController == azdoServerPullRequests && comment =~ /^own,/"
         }
       ],
       "comments/comment/context": [
@@ -299,16 +349,6 @@
         }
       ],
       "view/item/context": [
-        {
-          "command": "azdoServerPullRequests.approve",
-          "group": "inline@1",
-          "when": "view == azdoServerPullRequests.assigned && viewItem == pullRequest"
-        },
-        {
-          "command": "azdoServerPullRequests.reject",
-          "group": "inline@2",
-          "when": "view == azdoServerPullRequests.assigned && viewItem == pullRequest"
-        },
         {
           "command": "azdoServerPullRequests.approve",
           "group": "1_vote@1",
@@ -348,6 +388,18 @@
           "command": "azdoServerPullRequests.copyUrl",
           "group": "3_share@2",
           "when": "view == azdoServerPullRequests.assigned && viewItem =~ /^(draftP|p)ullRequest$/"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "azdoServerPullRequests.previousThread",
+          "group": "navigation@1",
+          "when": "resourceScheme == azdo-server-pr"
+        },
+        {
+          "command": "azdoServerPullRequests.nextThread",
+          "group": "navigation@2",
+          "when": "resourceScheme == azdo-server-pr"
         }
       ]
     }

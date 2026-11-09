@@ -3,6 +3,7 @@ import { createClient, HttpError, type PullRequest } from './client.ts';
 import { registerComments, type Session } from './comments.ts';
 import { registerDiffEditor } from './diffEditor.ts';
 import { registerPullRequestActions } from './pullRequestActions.ts';
+import { createThreadBadges } from './threadBadges.ts';
 import { createAssignedTree } from './tree.ts';
 
 const SECTION = 'azdoServerPullRequests';
@@ -15,12 +16,9 @@ export function activate(context: vscode.ExtensionContext) {
   );
   let generation = 0;
   let session: Session | undefined;
-  const tree = createAssignedTree(() => session?.client, report);
-  const comments = registerComments(
-    () => session,
-    report,
-    vscode.Uri.joinPath(context.extensionUri, 'media', 'like.svg'),
-  );
+  const badges = createThreadBadges();
+  const tree = createAssignedTree(() => session?.client, report, badges);
+  const comments = registerComments(() => session, report, badges);
 
   async function signIn() {
     const current = ++generation;
@@ -150,6 +148,7 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     log,
     tree,
+    badges.disposable,
     comments.disposable,
     registerDiffEditor(() => session?.client, report, comments.show),
     view,

@@ -8,18 +8,35 @@ import {
 } from './changes.ts';
 import { OPEN_CHANGE_COMMAND, type PullRequestChange } from './diffEditor.ts';
 import { groupByRepository, type RepositoryGroup } from './pullRequests.ts';
+import { changeResource, type createThreadBadges } from './threadBadges.ts';
+import { fetchThreads } from './threads.ts';
 
 type Node =
   | { kind: 'repository'; group: RepositoryGroup }
   | { kind: 'pullRequest'; pullRequest: PullRequest }
   | FileTreeNode<PullRequestChange>;
 
-const VOTES: Record<number, { label: string; color?: string }> = {
-  10: { label: 'Approved', color: 'charts.green' },
-  5: { label: 'Approved with suggestions', color: 'charts.green' },
-  0: { label: 'No vote' },
-  [-5]: { label: 'Waiting for author', color: 'charts.yellow' },
-  [-10]: { label: 'Rejected', color: 'charts.red' },
+const VOTES: Record<number, { label: string; color?: string; badge?: string }> =
+  {
+    10: { label: 'Approved', color: 'charts.green', badge: '✓' },
+    5: {
+      label: 'Approved with suggestions',
+      color: 'charts.green',
+      badge: '✓',
+    },
+    0: { label: 'No vote' },
+    [-5]: { label: 'Waiting for author', color: 'charts.yellow', badge: '…' },
+    [-10]: { label: 'Rejected', color: 'charts.red', badge: '✗' },
+  };
+
+const VOTE_SCHEME = 'azdo-server-pr-vote';
+
+const voteDecorations: vscode.FileDecorationProvider = {
+  provideFileDecoration(uri) {
+    if (uri.scheme !== VOTE_SCHEME) return;
+    const { badge, label } = VOTES[Number(uri.query)] ?? VOTES[0];
+    return badge ? new vscode.FileDecoration(badge, label) : undefined;
+  },
 };
 
 const CHANGE_ICONS = {
@@ -51,8 +68,13 @@ function pullRequestItem(pullRequest: PullRequest, userId: string) {
     pullRequest.isDraft ? `[Draft] ${pullRequest.title}` : pullRequest.title,
     vscode.TreeItemCollapsibleState.Collapsed,
   );
-  item.description = `!${pullRequest.pullRequestId} · ${author} · ${vote.label}`;
+  item.description = `!${pullRequest.pullRequestId} · ${author}`;
   item.id = `${pullRequest.repository.id}/${pullRequest.pullRequestId}`;
+  item.resourceUri = vscode.Uri.from({
+    scheme: VOTE_SCHEME,
+    path: `/${item.id}`,
+    query: String(ownVote),
+  });
   item.contextValue = pullRequest.isDraft ? 'draftPullRequest' : 'pullRequest';
   item.iconPath = new vscode.ThemeIcon(
     pullRequest.isDraft ? 'git-pull-request-draft' : 'git-pull-request',
@@ -86,6 +108,7 @@ function changeItem(name: string, change: PullRequestChange) {
   const item = new vscode.TreeItem(name);
   item.iconPath = new vscode.ThemeIcon(icon, new vscode.ThemeColor(color));
   item.description = change.originalPath;
+  item.resourceUri = changeResource(change.pullRequest, change.item.path);
   item.tooltip = change.item.path;
   item.command = {
     command: OPEN_CHANGE_COMMAND,
@@ -98,8 +121,13 @@ function changeItem(name: string, change: PullRequestChange) {
 export function createAssignedTree(
   getClient: () => AzdoClient | undefined,
   report: (error: unknown) => unknown,
+  badges: ReturnType<typeof createThreadBadges>,
 ) {
   const changed = new vscode.EventEmitter<void>();
+  const disposable = vscode.Disposable.from(
+    changed,
+    vscode.window.registerFileDecorationProvider(voteDecorations),
+  );
   let groups: RepositoryGroup[] = [];
   let userId = '';
 
@@ -109,6 +137,9 @@ export function createAssignedTree(
     try {
       const { iteration, baseCommit, iterationCommit, changes } =
         await fetchChanges(client, pullRequest);
+      void fetchThreads(client, pullRequest, iteration)
+        .then((threads) => badges.update(pullRequest, iteration, threads))
+        .catch(report);
       return buildFileTree(
         changes.map((change) => ({
           ...change,
@@ -160,7 +191,7 @@ export function createAssignedTree(
 
   return {
     provider,
-    dispose: () => changed.dispose(),
+    dispose: () => disposable.dispose(),
     show(pullRequests: PullRequest[], currentUserId: string) {
       groups = groupByRepository(pullRequests);
       userId = currentUserId;

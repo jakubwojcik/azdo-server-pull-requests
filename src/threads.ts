@@ -14,7 +14,7 @@ interface IterationRange {
 export interface ThreadComment {
   id: number;
   author: { id: string; displayName: string };
-  usersLiked?: { id: string }[];
+  usersLiked?: { id: string; displayName: string }[];
   content?: string;
   publishedDate?: string;
   lastContentUpdatedDate?: string;
@@ -59,6 +59,46 @@ export const STATUSES = [
   { name: 'pending', code: 6, label: 'Pending', resolved: false },
 ];
 
+export const threadStatus = (name?: string) =>
+  STATUSES.find((status) => status.name === name) ?? {
+    name: 'unknown',
+    code: 0,
+    label: 'Unknown',
+    resolved: true,
+  };
+
+export function commentLabel(comment: ThreadComment, userId: string) {
+  const { publishedDate, lastContentUpdatedDate, usersLiked = [] } = comment;
+  const edited =
+    publishedDate &&
+    lastContentUpdatedDate &&
+    new Date(lastContentUpdatedDate) > new Date(publishedDate);
+  const names = [
+    ...usersLiked.filter((user) => user.id === userId).map(() => 'you'),
+    ...usersLiked
+      .filter((user) => user.id !== userId)
+      .map((user) => user.displayName),
+  ];
+  const likes =
+    names.length &&
+    `Liked by ${names.slice(0, 2).join(', ')}${names.length > 2 ? ` +${names.length - 2}` : ''}`;
+  return [edited && 'edited', likes].filter(Boolean).join(' · ') || undefined;
+}
+
+export function activeThreadCounts(threads: Thread[], iteration: number) {
+  const counts = new Map<string, number>();
+  const paths = new Set(
+    threads.flatMap((thread) => thread.threadContext?.filePath ?? []),
+  );
+  for (const path of paths) {
+    const active = fileThreads(threads, path, iteration).filter(
+      ({ thread }) => !threadStatus(thread.status).resolved,
+    ).length;
+    if (active) counts.set(path, active);
+  }
+  return counts;
+}
+
 export const threadsPath = (pullRequest: PullRequest) =>
   `${pullRequestPath(pullRequest)}/threads`;
 
@@ -75,17 +115,18 @@ export function fileThreads(
     }
     const { iterationContext, trackingCriteria } =
       thread.pullRequestThreadContext ?? {};
-    // ADR-0002: the server sets trackingCriteria only on Threads it re-anchored.
-    const outdated =
-      !trackingCriteria &&
-      (iterationContext?.secondComparingIteration ?? iteration) < iteration;
     const side =
       context.rightFileStart || !context.leftFileStart ? 'right' : 'left';
     const start = context[`${side}FileStart`];
     const end = context[`${side}FileEnd`] ?? start;
+    // ADR-0002: a Thread the server could not re-anchor comes back at line 0.
+    const outdated =
+      (start?.line ?? 1) < 1 ||
+      (!trackingCriteria &&
+        (iterationContext?.secondComparingIteration ?? iteration) < iteration);
     const lines =
       start && end && !outdated
-        ? { start: start.line, end: end.line }
+        ? { start: start.line, end: Math.max(start.line, end.line) }
         : undefined;
     return [{ thread, comments, side, lines, outdated }];
   });
