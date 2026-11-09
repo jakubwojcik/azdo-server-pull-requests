@@ -4,10 +4,10 @@ Run against the real Collection before a release: press F5 in this repo, then "A
 
 ## Tree
 
-- [ ] Pull Requests are grouped under their Repository, with the Project in the description.
+- [x] Pull Requests are grouped under their Repository, with the Project in the description.
 - [ ] Drafts show the `[Draft]` prefix and have no Vote actions.
-- [ ] The description is `!id · author`; the icon colour and the badge at the end of the row (✓ Approved or Approved with suggestions, … Waiting for author, ✗ Rejected, none for no vote) match your own Vote.
-- [ ] Each Change shows a badge with the number of active Threads (Active and Pending); it drops after Resolve.
+- [x] The description is `!id · author`; the icon colour and the badge at the end of the row (✓ Approved or Approved with suggestions, … Waiting for author, ✗ Rejected, none for no vote) match your own Vote.
+- [x] Each Change shows a badge with the number of active Threads (Active and Pending); it drops after Resolve.
 
 ## Diff
 
@@ -46,4 +46,4 @@ Run against the real Collection before a release: press F5 in this repo, then "A
 ## Errors
 
 - [ ] A wrong PAT shows "The Collection rejected the PAT." with Update PAT.
-- [ ] With the log level set to Debug, the Output panel "Azure DevOps Server Pull Requests" logs each request without the PAT.
+- [x] With the log level set to Debug, the Output panel "Azure DevOps Server Pull Requests" logs each request without the PAT.
